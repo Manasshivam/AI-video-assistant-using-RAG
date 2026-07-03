@@ -35,7 +35,7 @@ def summarize(transcript: str) -> str:
 
     chunks = split_transcript(transcript)
 
-    chunk_summaries = [map_chain.invoke({"text": chunk}) for chunk in chunks]
+    chunk_summaries = map_chain.batch([{"text": chunk} for chunk in chunks])
 
     combined_prompt = ChatPromptTemplate.from_messages(
     [

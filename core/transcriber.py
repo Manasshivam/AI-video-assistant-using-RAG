@@ -1,12 +1,13 @@
 import whisper
 import os
 import requests
+import concurrent.futures
 from pydub import AudioSegment
 
 SARVAM_PIECE_SECONDS = 25
 
 
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small")
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "tiny")
 
 
 SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")
@@ -23,7 +24,7 @@ def load_model():
 
     if _model is None: 
         print(f"Loading Whisper model: {WHISPER_MODEL} ...")
-        _model = whisper.load_model(WHISPER_MODEL) 
+        _model = whisper.load_model(WHISPER_MODEL.lower()) 
         print("Whisper model loaded.")
     return _model 
 
@@ -32,8 +33,12 @@ def transcribe_chunk_whisper(chunk_path: str) -> str:
 
     model = load_model()  
 
-    result = model.transcribe(chunk_path, task="transcribe")  
-    return result["text"]  
+    try:
+        result = model.transcribe(chunk_path, task="transcribe", fp16=False)  
+        return result.get("text", "")
+    except Exception as e:
+        print(f"Whisper transcription failed on {chunk_path}: {e}")
+        return ""
 
 
 def _send_to_sarvam(piece_path: str) -> str:
@@ -70,20 +75,28 @@ def transcribe_chunk_sarvam(chunk_path: str) -> str:
     audio = AudioSegment.from_wav(chunk_path)
     piece_ms = SARVAM_PIECE_SECONDS * 1000
 
-    full_text = ""
     total_pieces = (len(audio) + piece_ms - 1) // piece_ms
+    piece_paths = []
 
     for i, start in enumerate(range(0, len(audio), piece_ms)):
         piece = audio[start: start + piece_ms]
         piece_path = f"{chunk_path}_sv_{i}.wav"
         piece.export(piece_path, format="wav")
+        piece_paths.append(piece_path)
 
+    full_text = ""
+    try:
+        print(f"  → Sending {total_pieces} Sarvam pieces concurrently...")
+        executor = concurrent.futures.ThreadPoolExecutor()
         try:
-            print(f"  → Sarvam piece {i + 1}/{total_pieces} ...")
-            full_text += _send_to_sarvam(piece_path) + " "
+            results = list(executor.map(_send_to_sarvam, piece_paths))
+            full_text = " ".join(results)
         finally:
-            if os.path.exists(piece_path):
-                os.remove(piece_path)
+            executor.shutdown(wait=False, cancel_futures=True)
+    finally:
+        for path in piece_paths:
+            if os.path.exists(path):
+                os.remove(path)
 
     return full_text.strip()
 
@@ -97,7 +110,8 @@ def transcribe_chunk(chunk_path: str, language: str = "english") -> str:
     - english  → Whisper (local model)
     - hinglish → Sarvam (translates to English while transcribing)
     """
-    if language.lower() == "hinglish":
+    # Force everything through the lightning-fast Sarvam API if the key exists
+    if SARVAM_API_KEY:
         return transcribe_chunk_sarvam(chunk_path)
     return transcribe_chunk_whisper(chunk_path)
 

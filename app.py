@@ -1,7 +1,18 @@
 import streamlit as st
 import time
 import json
+import concurrent.futures
 from dotenv import load_dotenv
+
+# Load environment variables FIRST before anything else!
+load_dotenv()
+
+# FORCE RELOAD TO FIX STREAMLIT CACHING BUG
+import importlib
+import sys
+for mod in ["core.transcriber", "utils.audio_processor", "core.vector_store", "core.summarize", "core.extractor", "core.rag_engine"]:
+    if mod in sys.modules:
+        importlib.reload(sys.modules[mod])
 
 # Import core pipeline functions
 from utils.audio_processor import process_input
@@ -9,9 +20,6 @@ from core.transcriber import transcribe_all
 from core.summarize import summarize, generate_title
 from core.extractor import extract_action_items, extract_key_decisions, extract_questions
 from core.rag_engine import build_rag_chain, ask_question
-
-# Load environment variables
-load_dotenv()
 
 # Set up page configuration
 st.set_page_config(
@@ -241,29 +249,35 @@ if process_btn:
         st.sidebar.error("❌ Please supply either a YouTube Link or Upload a File to initialize.")
     else:
         # Runtime Simulated UI Structural Step Progress Matrix Loader Blocks
-        download_progress = st.progress(0, text="✨ Downloading & Fetching Media Stream...")
-        time.sleep(0.6)
-        download_progress.progress(100, text="✨ Media extraction complete.")
-        
-        audio_progress = st.progress(0, text="🎙️ Extracting Audio Isolation Layers...")
-        time.sleep(0.5)
-        audio_progress.progress(100, text="🎙️ Waveform extraction verification successful.")
-        
-        tx_progress = st.progress(0, text="⚡ Running Neural Transcription via Whisper...")
-        # Fire structural backend pipeline asset code logic
         try:
+            download_progress = st.progress(0, text="✨ Downloading & Fetching Media Stream... (This may take a few minutes for long videos)")
             chunks = process_input(final_source)
-            tx_progress.progress(50, text="⚡ Model transcribing token spaces...")
+            download_progress.progress(100, text="✨ Media extraction complete.")
+            
+            tx_progress = st.progress(0, text="⚡ Running Neural Transcription... (Please wait)")
             transcript = transcribe_all(chunks, language=language_input)
             tx_progress.progress(100, text="⚡ Transcription engine cycle completed.")
             
             ai_progress = st.progress(0, text="🧠 Synthesizing Summary via Gemini Context Blocks...")
-            title_gen = generate_title(transcript)
-            summary_gen = summarize(transcript)
-            action_gen = extract_action_items(transcript)
-            ai_progress.progress(60, text="🧠 Mapping entity matrix blocks & analytical extraction...")
-            decisions_gen = extract_key_decisions(transcript)
-            questions_gen = extract_questions(transcript)
+            
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+            try:
+                title_future = executor.submit(generate_title, transcript)
+                summary_future = executor.submit(summarize, transcript)
+                action_future = executor.submit(extract_action_items, transcript)
+                decisions_future = executor.submit(extract_key_decisions, transcript)
+                questions_future = executor.submit(extract_questions, transcript)
+                
+                ai_progress.progress(60, text="🧠 Mapping entity matrix blocks & analytical extraction...")
+                
+                title_gen = title_future.result()
+                summary_gen = summary_future.result()
+                action_gen = action_future.result()
+                decisions_gen = decisions_future.result()
+                questions_gen = questions_future.result()
+            finally:
+                executor.shutdown(wait=False, cancel_futures=True)
+                
             ai_progress.progress(100, text="🧠 Knowledge synthesis completed mapping records.")
             
             rag_progress = st.progress(0, text="💾 Indexing Vector stores into LangChain memory matrices...")

@@ -48,6 +48,11 @@ def chunk_audio(wav_path: str, chunk_minutes: int = 10) -> list:
 
     for i, start in enumerate(range(0, len(audio), chunk_ms)):
         chunk = audio[start:start + chunk_ms]
+        
+        # Skip micro-chunks (< 1 second) that cause Whisper to crash
+        if len(chunk) < 1000:
+            continue
+            
         chunk_path = f"{wav_path}_chunk_{i}.wav"
         chunk.export(chunk_path, format="wav")
         chunks.append(chunk_path)
