@@ -1,0 +1,39 @@
+# ── Audio Download ────────────────────────────────────────────────────────────
+yt-dlp>=2024.4.9                  # Download audio from YouTube URLs
+pydub>=0.25.1                     # Audio file manipulation / format conversion
+ffmpeg-python>=0.2.0              # Python bindings for FFmpeg (required by pydub)
+
+# ── Transcription ─────────────────────────────────────────────────────────────
+openai-whisper>=20231117          # Local Whisper ASR model
+torch>=2.2.0                      # PyTorch backend for Whisper
+torchaudio>=2.2.0                 # Audio I/O utilities for Torch
+
+# ── Translation (Hindi → English) ────────────────────────────────────────────
+deep-translator>=1.11.4           # Lightweight translation wrapper (Google/MyMemory)
+# Optional: use transformers Helsinki-NLP model for fully offline translation
+# transformers>=4.40.0
+# sentencepiece>=0.2.0
+
+# ── LLM / LangChain (Summarisation + Action Items) ───────────────────────────
+langchain>=0.2.0                  # LangChain core (LCEL, chains, prompts)
+langchain-community>=0.2.0        # Community integrations (MistralAI, loaders)
+langchain-mistralai>=0.1.6        # LangChain × Mistral AI integration
+mistralai>=0.4.2                  # Mistral AI Python SDK (free-tier API)
+
+# ── RAG Pipeline ──────────────────────────────────────────────────────────────
+chromadb>=0.5.0                   # Local vector store for transcript chunks
+langchain-chroma>=0.1.1           # LangChain ↔ ChromaDB connector
+sentence-transformers>=2.7.0      # HuggingFace embedding models
+langchain-huggingface>=0.0.3      # LangChain ↔ HuggingFace embeddings connector
+
+# ── Streamlit UI ──────────────────────────────────────────────────────────────
+streamlit>=1.35.0                 # Web UI framework
+streamlit-chat>=0.1.1             # Chat message components for Streamlit
+
+# ── Export (PDF + TXT) ────────────────────────────────────────────────────────
+fpdf2>=2.7.9                      # Generate PDF export of summary / action items
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+python-dotenv>=1.0.1              # Load API keys from .env file
+tiktoken>=0.7.0                   # Token counting for chunking / prompt management
+numpy>=1.26.0                     # Numerical ops (required by Whisper / torch)
