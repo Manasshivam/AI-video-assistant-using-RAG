@@ -1,6 +1,7 @@
 # ── Audio Download ────────────────────────────────────────────────────────────
 yt-dlp>=2024.4.9                  # Download audio from YouTube URLs
 pydub>=0.25.1                     # Audio file manipulation / format conversion
+pyaudioop                         # Fallback for Python 3.13+ where audioop is removed
 ffmpeg-python>=0.2.0              # Python bindings for FFmpeg (required by pydub)
 
 # ── Transcription ─────────────────────────────────────────────────────────────
